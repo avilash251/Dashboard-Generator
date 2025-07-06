@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+.pnpm/
+package-lock.json
+yarn.lock
+
+# build output
+dist/
+build/
+.next/
+out/
+
+# misc
+.env
+.env.*.local
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.local
+*.swp
+
+# testing
+coverage/

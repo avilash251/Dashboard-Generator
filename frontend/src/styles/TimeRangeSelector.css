@@ -1,0 +1,7 @@
+.time-range-selector {
+  display: inline-block;
+  margin-right: 10px;
+}
+.time-range-selector label {
+  margin-right: 5px;
+}

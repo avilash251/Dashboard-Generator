@@ -1,0 +1,68 @@
+.search-container {
+  padding: 10px;
+  text-align: center;
+  position: relative;
+}
+
+.input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.input-wrapper input {
+  width: 800px;
+  padding: 10px 10px 10px 36px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.input-wrapper button {
+  margin-left: 10px;
+  padding: 10px 16px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.input-wrapper button:hover {
+  background-color: #0056b3;
+}
+
+.brain-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.autocomplete-list {
+  position: static;
+  top: 100%;
+  left: 20%;
+  width: 60%;
+  max-height: 180px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 4px;
+  text-align: left;
+  z-index: 100;
+  font-size: 15px;
+}
+
+.autocomplete-list li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.autocomplete-list li:hover,
+.autocomplete-list li.highlighted {
+  background-color: #dceeff;
+}

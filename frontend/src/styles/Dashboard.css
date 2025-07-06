@@ -1,0 +1,9 @@
+.dashboard-container {
+  padding: 20px;
+  background: #f5f6fa;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}

@@ -1,0 +1,7 @@
+.endpoint-selector {
+  display: inline-block;
+  margin-right: 10px;
+}
+.endpoint-selector label {
+  margin-right: 5px;
+}

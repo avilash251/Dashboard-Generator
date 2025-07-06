@@ -1,0 +1,23 @@
+.suggestion-bar {
+  padding: 10px 20px;
+  background-color: #f0f2f5;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+.suggestion-bar ul {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+}
+.suggestion-bar li {
+  margin-right: 10px;
+  padding: 5px 10px;
+  background-color: #e0e7ff;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.suggestion-bar li:hover {
+  background-color: #c7d2fe;
+}

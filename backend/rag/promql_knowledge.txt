@@ -1,0 +1,35 @@
+CPU Usage:
+1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))
+
+Memory Usage:
+100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)
+
+Disk Usage:
+100 * (1 - (node_filesystem_free_bytes / node_filesystem_size_bytes))
+
+Network Inbound:
+rate(node_network_receive_bytes_total[5m])
+
+Network Outbound:
+rate(node_network_transmit_bytes_total[5m])
+
+System Load:
+node_load1
+
+Swap Usage:
+node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes
+
+File Descriptors:
+node_filefd_allocated
+
+Context Switches:
+rate(node_context_switches_total[5m])
+
+Processes Running:
+node_procs_running
+
+Show CPU usage → promql: server_cpu_usage_percent
+Show memory usage → promql: server_memory_used_mb
+Show disk space → promql: server_disk_free_gb
+Show uptime → promql: server_uptime_seconds
+

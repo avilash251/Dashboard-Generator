@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+crewai
+langchain
+google-generativeai
+faiss-cpu
+openai
+python-dotenv
