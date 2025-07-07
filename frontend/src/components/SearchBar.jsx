@@ -1,131 +1,116 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
 import "../styles/SearchBar.css";
 
-const STATIC_SUGGESTIONS = [
+const defaultSuggestions = [
   "Show CPU usage for server1",
   "Disk I/O trend over last 6 hours",
   "HTTP 5xx error rate",
   "Memory usage for namespace kube-system",
-  "Node latency P95 for cluster1"
+  "Node latency P95 for cluster1",
 ];
 
-const TIME_RANGES = ["5m", "15m", "1h", "6h", "12h", "24h"];
-
-const SearchBar = ({ onSearch }) => {
-  const [input, setInput] = useState("");
+function SearchBar({ onSearch }) {
+  const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [isStaticMode, setIsStaticMode] = useState(false);
-  const [timeRange, setTimeRange] = useState("1h");
-  const [promUrl, setPromUrl] = useState("http://localhost:9090");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const inputRef = useRef();
 
-  const fetchDynamicSuggestions = async () => {
-    if (input.length < 3) return;
+  const fetchSuggestions = async (input) => {
     try {
-      const res = await fetch("http://localhost:8080/api/suggestions");
-      const data = await res.json();
-      const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
-      const merged = [...new Set([...history, ...(data.suggestions || [])])];
-      setSuggestions(merged);
+      if (input.length < 3) return setSuggestions([]);
+      const res = await axios.get(`/api/suggestion?q=${input}`);
+      setSuggestions(res.data || []);
     } catch (err) {
-      console.error("Failed to load suggestions", err);
+      console.error("❌ Failed to fetch suggestions:", err);
     }
   };
 
-  useEffect(() => {
-    fetchDynamicSuggestions();
-  }, [input]);
+  const handleSearch = (prompt) => {
+    if (!prompt.trim()) return;
+    onSearch(prompt);
+    setQuery("");
+    setSuggestions([]);
+    setActiveIndex(-1);
+    setShowDropdown(false);
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
-        submitSearch(filteredSuggestions[highlightedIndex]);
-      } else {
-        submitSearch(input);
-      }
-    } else if (e.key === "ArrowDown") {
-      setHighlightedIndex((prev) =>
-        Math.min(prev + 1, filteredSuggestions.length - 1)
-      );
-    } else if (e.key === "ArrowUp") {
-      setHighlightedIndex((prev) => Math.max(prev - 1, 0));
-    }
-  };
-
-  const submitSearch = (query) => {
-    if (!query) return;
+    // Save to history
     const history = JSON.parse(localStorage.getItem("searchHistory") || "[]");
-    const updatedHistory = [query, ...history.filter((q) => q !== query)].slice(0, 10);
-    localStorage.setItem("searchHistory", JSON.stringify(updatedHistory));
-    onSearch(query, timeRange, promUrl);
-    setShowSuggestions(false);
-    setHighlightedIndex(-1);
+    const updated = [prompt, ...history.filter((h) => h !== prompt)].slice(0, 5);
+    localStorage.setItem("searchHistory", JSON.stringify(updated));
   };
 
-  const handleSelect = (s) => {
-    setInput(s);
-    submitSearch(s);
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowDown") {
+      setActiveIndex((prev) => (prev + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      setActiveIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === "Enter") {
+      if (activeIndex >= 0 && suggestions[activeIndex]) {
+        handleSearch(suggestions[activeIndex]);
+      } else {
+        handleSearch(query);
+      }
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    fetchSuggestions(val);
+    setShowDropdown(true);
   };
 
   const handleBrainClick = () => {
-    setIsStaticMode(true);
-    setSuggestions(STATIC_SUGGESTIONS);
-    setShowSuggestions(!showSuggestions);
+    setSuggestions(defaultSuggestions);
+    setShowDropdown(true);
+    inputRef.current.focus();
   };
 
-  const filteredSuggestions = (isStaticMode ? STATIC_SUGGESTIONS : suggestions).filter((s) =>
-    s.toLowerCase().includes(input.toLowerCase())
-  );
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest(".searchbar-container")) {
+        setShowDropdown(false);
+        setActiveIndex(-1);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="search-bar-wrapper">
-      {/* <div className="dropdowns">
-        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
-          {TIME_RANGES.map((range) => (
-            <option key={range} value={range}>{range}</option>
-          ))}
-        </select>
+    <div className="searchbar-container">
+      <div className="search-input-wrapper">
         <input
+          ref={inputRef}
           type="text"
-          value={promUrl}
-          onChange={(e) => setPromUrl(e.target.value)}
-          placeholder="Prometheus URL"
+          placeholder="Ask your infrastructure question..."
+          value={query}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setShowDropdown(true)}
         />
-      </div> */}
-
-      <div className="input-wrapper">
-        <span className="brain-icon" onClick={handleBrainClick}>🧠</span>
-        <input
-          type="text"
-          id="search-input"
-          placeholder="Ask me about server metrics..."
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setHighlightedIndex(-1);
-          }}
-          onKeyDown={handleKeyPress}
-          onClick={() => setShowSuggestions(true)}
-        />
-        <button onClick={() => submitSearch(input)}>Search</button>
+        <span className="brain-icon-inside" onClick={handleBrainClick} title="Show suggestions">🧠</span>
+        <button onClick={() => handleSearch(query)}>Search</button>
       </div>
 
-      {showSuggestions && filteredSuggestions.length > 0 && (
-        <ul className="autocomplete-list">
-          {filteredSuggestions.map((s, i) => (
+      {showDropdown && suggestions.length > 0 && (
+        <ul className="suggestion-dropdown">
+          {suggestions.map((sug, idx) => (
             <li
-              key={i}
-              onClick={() => handleSelect(s)}
-              className={highlightedIndex === i ? "highlighted" : ""}
+              key={idx}
+              className={idx === activeIndex ? "active" : ""}
+              onClick={() => handleSearch(sug)}
             >
-              {s}
+              {sug}
             </li>
           ))}
         </ul>
       )}
     </div>
+
   );
-};
+}
 
 export default SearchBar;

@@ -1,139 +1,80 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import socket from "../utils/socket";
 import SearchBar from "./SearchBar";
 import StatCard from "./StatCard";
-import DynamicChart from "./DynamicChart";
-import MapView from "./MapView";
-import PromptSuggestions from "./PromptSuggestions";
-import EndpointSelector from "./EndpointSelector";
-import TimeRangeSelector from "./TimeRangeSelector";
-import "../styles/Dashboard.css";
 
-const Dashboard = () => {
-  const [query, setQuery] = useState("");
-  const [charts, setCharts] = useState([]);
-  const [stats, setStats] = useState({});
-  const [categoryTabs, setCategoryTabs] = useState([]);
-  const [activeTab, setActiveTab] = useState("all");
-  const [timeRange, setTimeRange] = useState("1h");
-  const [prometheusURL, setPrometheusURL] = useState("http://localhost:9090");
-  const [pinnedCharts, setPinnedCharts] = useState([]);
+function Dashboard() {
   const [loading, setLoading] = useState(false);
+  const [metrics, setMetrics] = useState([]);
+  const [liveStatus, setLiveStatus] = useState("🔴 Offline");
 
-  const handleSearch = async (inputQuery) => {
-    if (!inputQuery) return;
-    setQuery(inputQuery);
-    setLoading(true);
+  const handleSearchSubmit = async (prompt) => {
     try {
-      const response = await axios.post("http://localhost:8080/api/chat", {
-        prompt: inputQuery,
-        time_range: timeRange,
-        prometheus_url: prometheusURL,
-      });
-
-      const raw = response.data.response || "[]";
-      let chartsFromGemini = [];
-      try {
-        chartsFromGemini = JSON.parse(raw);
-      } catch (err) {
-        console.warn("Fallback to static layout due to Gemini JSON error:", err);
-        chartsFromGemini = [{
-          category: "Error",
-          title: "Gemini failed to respond",
-          promql: "",
-          chart_type: "text",
-          thresholds: {},
-          data: []
-        }];
-      }
-
-      const promises = chartsFromGemini.map(async (chart) => {
-        const series = await axios.post("http://localhost:8080/api/timeseries/query", {
-          promql: chart.promql,
-          prometheus_url: prometheusURL,
-        });
-        const values = series.data?.data?.result?.[0]?.values || [];
-        const formatted = values.map(([ts, val]) => ({
-          time: new Date(ts * 1000).toLocaleTimeString(),
-          value: parseFloat(val),
-        }));
-        return { ...chart, data: formatted };
-      });
-
-      const resolved = await Promise.all(promises);
-      setCharts(resolved);
-
-      const uniqueCategories = [...new Set(resolved.map((c) => c.category || "misc"))];
-      setCategoryTabs(["all", ...uniqueCategories]);
-
-      const statsMap = {};
-      resolved.forEach(chart => {
-        if (chart.category && chart.data.length) {
-          const lastVal = chart.data[chart.data.length - 1].value;
-          statsMap[chart.category] = lastVal.toFixed(2);
-        }
-      });
-      setStats(statsMap);
+      setLoading(true);
+      const res = await axios.post("/api/chat", { prompt });
+      setMetrics(res.data.metrics || []);
     } catch (err) {
-      console.error("Failed to fetch charts:", err);
+      console.error("Chat API error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePin = (title) => {
-    setPinnedCharts(
-      pinnedCharts.includes(title)
-        ? pinnedCharts.filter((t) => t !== title)
-        : [...pinnedCharts, title]
-    );
-  };
+  // 🧠 Listen to socket events
+  useEffect(() => {
+    socket.on("connect", () => {
+      setLiveStatus("🟢 Live");
+    });
 
-  const visibleCharts = charts.filter(
-    (c) => activeTab === "all" || c.category === activeTab
-  );
+    socket.on("disconnect", () => {
+      setLiveStatus("🔴 Offline");
+    });
+
+    socket.on("live-status", (data) => {
+      setLiveStatus(data.status || "🟢 Live");
+    });
+
+    socket.on("metric-update", (data) => {
+      setMetrics((prev) => {
+        const updated = [...prev];
+        const index = updated.findIndex((m) => m.title === data.metric);
+        if (index !== -1) {
+          updated[index].value = data.value;
+        } else {
+          updated.push({ title: data.metric, value: data.value });
+        }
+        return updated;
+      });
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("live-status");
+      socket.off("metric-update");
+    };
+  }, []);
 
   return (
     <div className="dashboard-container">
-      <SearchBar onSearch={handleSearch} />
-      {/* <div className="selectors">
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-        <EndpointSelector value={prometheusURL} onChange={setPrometheusURL} />
-      </div> */}
-
-      {loading && <p className="loading">⏳ Loading...</p>}
-
-      {!loading && charts.length > 0 && (
-        <>
-          <div className="stat-row">
-            {Object.entries(stats).map(([title, value]) => (
-              <StatCard key={title} title={title} value={value} />
-            ))}
-          </div>
-          {/* <MapView /> */}
-          <div className="tabs">
-            {categoryTabs.map((tab) => (
-              <button
-                key={tab}
-                className={activeTab === tab ? "active-tab" : ""}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-          {visibleCharts.map((chart, i) => (
-            <DynamicChart
-              key={i}
-              {...chart}
-              pinned={pinnedCharts.includes(chart.title)}
-              onPin={handlePin}
-            />
-          ))}
-        </>
-      )}
+      <h3>🔍 Agentic AI Dashboard <span style={{
+        float: "right",
+        fontSize: "0.85rem", 
+        padding: "2px 6px",
+        backgroundColor: "#eee",
+        borderRadius: "4px"
+        }}>{liveStatus}</span>
+      </h3>
+      <SearchBar onSearch={handleSearchSubmit} />
+      {loading && <p>🔄 Loading...</p>}
+      <div className="metric-cards">
+        {metrics.map((metric, idx) => (
+          <StatCard key={idx} title={metric.title} value={metric.value} threshold={metric.threshold} />
+        ))}
+      </div>
     </div>
   );
-};
+}
 
 export default Dashboard;

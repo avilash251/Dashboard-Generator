@@ -1,20 +1,16 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-import os
-import requests
+from fastapi import APIRouter, Query
+from utils.prometheus_query import query_range
 
-router = APIRouter()  # ✅ This is what must exist!
+router = APIRouter()
 
-PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
-
-class TimeSeriesRequest(BaseModel):
-    promql: str
+@router.get("/timeseries")
+def get_timeseries(
+    promql: str = Query(...),
+    duration: str = "2h",
+    step: str = "60s",
     prometheus_url: str = "http://localhost:9090"
-
-@router.post("/timeseries/query")
-def query_timeseries(req: TimeSeriesRequest):
+):
     try:
-        response = requests.get(f"{req.prometheus_url}/api/v1/query", params={"query": req.promql})
-        return response.json()
+        return query_range(promql, duration, step, prometheus_url)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prometheus query failed: {str(e)}")
+        return {"error": str(e)}
