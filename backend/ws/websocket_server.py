@@ -1,20 +1,21 @@
-from fastapi import WebSocket, APIRouter, WebSocketDisconnect
-import asyncio
-import time
-import random
+from fastapi import WebSocket, APIRouter
+import json
 
-router = APIRouter()
-clients = set()
+ws_router = APIRouter()
 
-@router.websocket("/ws/metrics")
-async def ws_metrics(websocket: WebSocket):
+@ws_router.websocket("/ws/metrics")
+async def metrics_stream(websocket: WebSocket):
     await websocket.accept()
-    clients.add(websocket)
     try:
         while True:
-            data = {"metric": "CPU Usage", "value": random.randint(20, 80), "timestamp": time.time()}
-            for client in clients:
-                await client.send_json(data)
+            # Simulate or fetch real-time metric
+            metric = {
+                "title": "CPU Usage",
+                "type": "cpu",
+                "value": 77,
+                "timestamp": time.time(),
+            }
+            await websocket.send_text(json.dumps(metric))
             await asyncio.sleep(5)
-    except WebSocketDisconnect:
-        clients.remove(websocket)
+    except:
+        await websocket.close()

@@ -1,17 +1,26 @@
 import requests
-from datetime import datetime, timedelta
 
-def query_range(promql, duration="1h", step="60s", prometheus_url="http://localhost:9090"):
+PROMETHEUS_URL = "http://localhost:9090"  # Update to actual URL if needed
+
+def query_prometheus(promql: str, time: str = None):
     try:
-        now = datetime.utcnow()
-        start = now - timedelta(hours=int(duration.replace("h", "")))
+        params = {"query": promql}
+        if time:
+            params["time"] = time
+        response = requests.get(f"{PROMETHEUS_URL}/api/v1/query", params=params, timeout=5)
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+def query_range(promql: str, start: str, end: str, step: str = "30s"):
+    try:
         params = {
             "query": promql,
-            "start": start.timestamp(),
-            "end": now.timestamp(),
+            "start": start,
+            "end": end,
             "step": step
         }
-        r = requests.get(f"{prometheus_url}/api/v1/query_range", params=params)
-        return r.json().get("data", {}).get("result", [{}])[0]
+        response = requests.get(f"{PROMETHEUS_URL}/api/v1/query_range", params=params, timeout=5)
+        return response.json()
     except Exception as e:
         return {"error": str(e)}

@@ -1,5 +1,5 @@
 import asyncio
-from ws.socketio_server import emit_live_status, emit_metric_update
+from backend.ws.websocket_server import emit_live_status, emit_metric_update
 
 async def simulate():
     await emit_live_status()

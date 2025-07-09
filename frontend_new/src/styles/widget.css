@@ -1,0 +1,36 @@
+.widget-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  padding: 16px;
+  margin: 10px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.widget-value {
+  font-size: 1.5rem;
+  margin: 8px 0 12px 0;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: white;
+  font-weight: bold;
+}
+
+.badge.warning {
+  background-color: orange;
+}
+
+.badge.danger {
+  background-color: red;
+}
