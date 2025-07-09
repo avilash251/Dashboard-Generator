@@ -1,9 +1,9 @@
 # backend/routes/chat.py
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from agents.crew_routes import handle_prompt_with_crew
-from utils.slm_router import slm_respond
-from utils.predict_next import generate_followup
+from utils.intent_detector import detect_intent
+from utils.predict_next import handle_prompt_with_crew
+from utils.gemini_wrapper import ask_gemini
 from dbscripts.audit_db import save_log
 
 router = APIRouter()
@@ -12,37 +12,30 @@ router = APIRouter()
 async def chat(request: Request):
     try:
         body = await request.json()
-        user_prompt = body.get("prompt", "").strip()
+        user_prompt = body.get("prompt", "")
+        
+        intent = detect_intent(user_prompt)
 
-        # Step 1: Save initial prompt from user
-        await save_log(user_prompt, source="user")
+        # Handle blocked/suspicious
+        if intent.startswith("Sorry"):
+            await save_log(user_prompt, source="user", flagged=True)
+            return {"slm": intent, "layout": [], "next": []}
 
-        # Step 2: Instant SLM response (e.g., "Thanks, generating...")
-        slm_response = slm_respond(user_prompt)
-        if slm_response:
-            return {
-                "slm": slm_response,
-                "layout": [],
-                "next": []
-            }
+        if intent.startswith("Did you mean"):
+            await save_log(user_prompt, source="user", flagged=True)
+            return {"slm": intent, "layout": [], "next": []}
 
-        # Step 3: Run CrewAI agents for full layout generation
-        result = handle_prompt_with_crew(user_prompt)
-        charts = result.get("charts", [])
-        raw_output = result.get("raw", "")
-        followups = result.get("followups", [])
+        await save_log(user_prompt, source="user", flagged=False)
 
-        # Step 4: Save the crewAI output to audit log
-        await save_log(user_prompt, source="CrewAI", response=str(raw_output))
-
-        # Step 5: Predict follow-up suggestions
-        next_suggestions = generate_followup(user_prompt)
+        layout = ask_gemini(user_prompt)
+        suggestions = handle_prompt_with_crew(user_prompt)
 
         return {
             "slm": None,
-            "layout": charts,
-            "next": next_suggestions
+            "layout": layout,
+            "next": suggestions
         }
+
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

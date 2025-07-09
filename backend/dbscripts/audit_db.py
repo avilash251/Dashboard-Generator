@@ -1,75 +1,37 @@
+from peewee import SqliteDatabase, Model, TextField, CharField, DateTimeField, BooleanField
+from datetime import datetime
 import os
-from datetime import datetime, timedelta
-from sqlalchemy import create_engine, select, desc, func
-from sqlalchemy.orm import sessionmaker
-from .base import Base
-from .models import AuditLog
 
-# DB setup
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(basedir, "../../dbscripts/audit_log.db")
-os.makedirs(os.path.dirname(db_path), exist_ok=True)
+os.makedirs("backend/db", exist_ok=True)
+db = SqliteDatabase("backend/db/audit_log.db")
 
-engine = create_engine(
-    f"sqlite:///{db_path}",
-    connect_args={"check_same_thread": False},
-    echo=False,
-)
-SessionLocal = sessionmaker(bind=engine)
+class BaseModel(Model):
+    class Meta:
+        database = db
 
-# --- Utility Methods ---
+class AuditLog(BaseModel):
+    prompt = TextField()
+    source = CharField(default="user")
+    timestamp = DateTimeField(default=datetime.utcnow)
+    flagged = BooleanField(default=False)
+
+class AnomalyLog(BaseModel):
+    metric = CharField()
+    severity = CharField()
+    timestamp = DateTimeField(default=datetime.utcnow)
+
 def init_db():
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("✅ Database initialized")
-    except Exception as e:
-        print(f"❌ Failed to initialize DB: {e}")
-        
-def save_log(prompt: str, response_type: str, user_type: str = "user"):
-    try:
-        db = SessionLocal()
-        entry = AuditLog(
-            prompt=prompt,
-            response_type=response_type,
-            user_type=user_type,
-            timestamp=datetime.utcnow(),
-        )
-        db.add(entry)
-        db.commit()
-        db.close()
-    except Exception as e:
-        print(f"[❌ Error in save_log]: {e}")
+    db.connect()
+    db.create_tables([AuditLog, AnomalyLog], safe=True)
+    db.close()
 
+def save_log(prompt, source="user", flagged=False):
+    AuditLog.create(prompt=prompt, source=source, flagged=flagged)
+def get_recent_logs(limit=10):
+    return AuditLog.select().order_by(AuditLog.timestamp.desc()).limit(limit)
 
-def get_recent_logs(limit: int = 50):
-    try:
-        db = SessionLocal()
-        logs = db.query(AuditLog).order_by(desc(AuditLog.timestamp)).limit(limit).all()
-        db.close()
-        return logs
-    except Exception as e:
-        print(f"[❌ Error in get_recent_logs]: {e}")
-        return []
+def log_anomaly(metric, severity="warning"):
+    AnomalyLog.create(metric=metric, severity=severity)
 
-
-def get_anomaly_trend(days: int = 7):
-    try:
-        db = SessionLocal()
-        today = datetime.utcnow().date()
-        start_date = today - timedelta(days=days)
-
-        trend = (
-            db.query(func.date(AuditLog.timestamp), func.count())
-            .filter(
-                AuditLog.timestamp >= start_date,
-                AuditLog.response_type == "anomaly"
-            )
-            .group_by(func.date(AuditLog.timestamp))
-            .order_by(func.date(AuditLog.timestamp))
-            .all()
-        )
-        db.close()
-        return trend
-    except Exception as e:
-        print(f"[❌ Error in get_anomaly_trend]: {e}")
-        return []
+def get_anomaly_trend(limit=20):
+    return AnomalyLog.select().order_by(AnomalyLog.timestamp.desc()).limit(limit)

@@ -1,24 +1,19 @@
 from fastapi import APIRouter
 from dbscripts.audit_db import save_log, get_recent_logs, get_anomaly_trend
 
-router = APIRouter()
+history_router = APIRouter()
 
-@router.get("/history/logs")
-def get_logs():
-    try:
-        return {"logs": get_recent_logs()}
-    except Exception as e:
-        return {"error": str(e)}
+@history_router.post("/history/log")
+async def log_prompt(prompt: str, source: str = "user"):
+    save_log(prompt, source)
+    return {"status": "ok"}
 
-@router.get("/history/trend")
-def get_trend():
-    try:
-        return {"trend": get_anomaly_trend()}
-    except Exception as e:
-        return {"error": str(e)}
+@history_router.get("/history/recent")
+async def get_history():
+    logs = get_recent_logs()
+    return [{"prompt": log.prompt, "source": log.source, "timestamp": str(log.timestamp)} for log in logs]
 
-async def save_audit_log(prompt: str, source="user"):
-    try:
-        save_log(prompt, source)
-    except Exception as e:
-        print("Audit log error:", e)
+@history_router.get("/history/anomalies")
+async def get_anomalies():
+    logs = get_anomaly_trend()
+    return [{"metric": log.metric, "severity": log.severity, "timestamp": str(log.timestamp)} for log in logs]

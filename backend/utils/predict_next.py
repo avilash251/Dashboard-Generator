@@ -47,7 +47,54 @@
 #         print("[Gemini Error]", e)
 #         return {"suggestions": ["Unable to generate follow-ups"]}
 
-from agents.crew_routes import handle_prompt_with_crew
+# from agents.crew_routes import handle_prompt_with_crew
 
-def generate_followup(prompt: str) -> list:
-    return handle_prompt_with_crew(prompt)
+# def generate_followup(prompt: str) -> list:
+#     return handle_prompt_with_crew(prompt)
+
+from utils.intent_detector import detect_intent
+from utils.gemini_wrapper import ask_gemini
+
+# 🔗 Prompt chaining logic
+def handle_prompt_with_crew(prompt: str) -> list:
+    intent = detect_intent(prompt)
+
+    # 🔒 Handle malicious or unknown
+    if "Sorry" in intent:
+        return [intent]
+
+    # 🧠 Use prompt chaining based on known intent
+    intent_chains = {
+        "cpu_usage": [
+            "Show CPU usage for server1",
+            "What is the max CPU over the last 6 hours?",
+            "Compare CPU across nodes"
+        ],
+        "memory_usage": [
+            "Current memory usage trend",
+            "Compare memory vs cache usage",
+            "Memory swap rate on node2"
+        ],
+        "disk_info": [
+            "Disk space left on root partition",
+            "Which volume is almost full?",
+            "Show inode usage for /data"
+        ],
+        "error_rate": [
+            "HTTP 5xx error trend",
+            "Error rates by namespace",
+            "Spike in failed logins?"
+        ]
+        # Add more intent suggestions here...
+    }
+
+    if intent in intent_chains:
+        return intent_chains[intent]
+
+    # 🤖 Fallback to Gemini for less common prompts
+    try:
+        gemini_resp = ask_gemini(f"What follow-up questions would you recommend for: {prompt}?")
+        return gemini_resp.split("\n") if gemini_resp else ["No suggestions found."]
+    except Exception as e:
+        return [f"Gemini error: {str(e)}"]
+
