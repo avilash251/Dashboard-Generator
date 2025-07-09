@@ -1,36 +1,44 @@
 .widget-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  background-color: #1f1f1f;
+  color: #ffffff;
   padding: 16px;
-  margin: 10px;
-  width: 100%;
-  max-width: 600px;
+  margin: 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+  width: 220px;
+  transition: transform 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.widget-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.widget-card:hover {
+  transform: scale(1.03);
+}
+
+.widget-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #dcdcdc;
+  margin-bottom: 8px;
 }
 
 .widget-value {
-  font-size: 1.5rem;
-  margin: 8px 0 12px 0;
-}
-
-.badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: white;
+  font-size: 28px;
   font-weight: bold;
+  color: #00ffcc;
 }
 
-.badge.warning {
-  background-color: orange;
+.widget-unit {
+  font-size: 14px;
+  color: #888;
+  margin-left: 4px;
 }
 
-.badge.danger {
-  background-color: red;
+.widget-footer {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  justify-content: space-between;
 }
