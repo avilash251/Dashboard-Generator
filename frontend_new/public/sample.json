@@ -1,0 +1,68 @@
+{
+  "widgets": [
+    {
+      "id": "cpu_usage",
+      "title": "CPU Usage",
+      "value": "45%",
+      "unit": "%",
+      "category": "Infrastructure",
+      "type": "stat"
+    },
+    {
+      "id": "memory_usage",
+      "title": "Memory Used",
+      "value": "13.2 GB",
+      "unit": "GB",
+      "category": "Infrastructure",
+      "type": "stat"
+    },
+    {
+      "id": "disk_free",
+      "title": "Disk Free",
+      "value": "217 GB",
+      "unit": "GB",
+      "category": "Infrastructure",
+      "type": "stat"
+    },
+    {
+      "id": "network_in",
+      "title": "Network In",
+      "value": "340 MBps",
+      "unit": "MBps",
+      "category": "Infrastructure",
+      "type": "stat"
+    },
+    {
+      "id": "private_cloud_clusters",
+      "title": "Private Clusters",
+      "value": "3",
+      "unit": "count",
+      "category": "Private Cloud",
+      "type": "stat"
+    },
+    {
+      "id": "private_cloud_pods",
+      "title": "Private Pods",
+      "value": "152",
+      "unit": "count",
+      "category": "Private Cloud",
+      "type": "stat"
+    },
+    {
+      "id": "public_cloud_clusters",
+      "title": "Public Clusters",
+      "value": "2",
+      "unit": "count",
+      "category": "Public Cloud",
+      "type": "stat"
+    },
+    {
+      "id": "public_cloud_pods",
+      "title": "Public Pods",
+      "value": "78",
+      "unit": "count",
+      "category": "Public Cloud",
+      "type": "stat"
+    }
+  ]
+}
