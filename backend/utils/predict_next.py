@@ -52,49 +52,55 @@
 # def generate_followup(prompt: str) -> list:
 #     return handle_prompt_with_crew(prompt)
 
-from utils.intent_detector import detect_intent
-from utils.gemini_wrapper import ask_gemini
+# backend/utils/predict_next.py
 
-# 🔗 Prompt chaining logic
-def handle_prompt_with_crew(prompt: str) -> list:
-    intent = detect_intent(prompt)
+from rapidfuzz import fuzz
 
-    # 🔒 Handle malicious or unknown
-    if "Sorry" in intent:
-        return [intent]
+# 🔸 Sample follow-up prompts for key intents
+FOLLOWUP_MAP = {
+    "cpu_usage": [
+        "Show CPU usage for all nodes",
+        "Compare CPU usage across time",
+        "Alert if CPU crosses 80%"
+    ],
+    "memory_usage": [
+        "Show memory usage trend",
+        "Alert for high memory usage",
+        "Compare heap and buffer usage"
+    ],
+    "disk_info": [
+        "Show disk usage for each volume",
+        "Disk I/O trend over 6h",
+        "Trigger alert if disk < 10% free"
+    ],
+    "uptime_status": [
+        "Show uptime for all servers",
+        "Detect recent restarts",
+        "Track node stability"
+    ]
+}
 
-    # 🧠 Use prompt chaining based on known intent
-    intent_chains = {
-        "cpu_usage": [
-            "Show CPU usage for server1",
-            "What is the max CPU over the last 6 hours?",
-            "Compare CPU across nodes"
-        ],
-        "memory_usage": [
-            "Current memory usage trend",
-            "Compare memory vs cache usage",
-            "Memory swap rate on node2"
-        ],
-        "disk_info": [
-            "Disk space left on root partition",
-            "Which volume is almost full?",
-            "Show inode usage for /data"
-        ],
-        "error_rate": [
-            "HTTP 5xx error trend",
-            "Error rates by namespace",
-            "Spike in failed logins?"
-        ]
-        # Add more intent suggestions here...
-    }
+# 🔍 Intents and fallback logic
+INTENT_KEYWORDS = {
+    "cpu_usage": ["cpu", "processor", "core", "utilization"],
+    "memory_usage": ["memory", "ram", "heap", "cache"],
+    "disk_info": ["disk", "storage", "drive", "partition"],
+    "uptime_status": ["uptime", "boot", "restarted", "start"]
+}
 
-    if intent in intent_chains:
-        return intent_chains[intent]
 
-    # 🤖 Fallback to Gemini for less common prompts
-    try:
-        gemini_resp = ask_gemini(f"What follow-up questions would you recommend for: {prompt}?")
-        return gemini_resp.split("\n") if gemini_resp else ["No suggestions found."]
-    except Exception as e:
-        return [f"Gemini error: {str(e)}"]
+def match_intent(prompt: str) -> str | None:
+    prompt = prompt.lower()
+    for intent, keywords in INTENT_KEYWORDS.items():
+        for keyword in keywords:
+            if fuzz.partial_ratio(keyword, prompt) > 75:
+                return intent
+    return None
 
+
+def generate_followup(prompt: str) -> list[str]:
+    intent = match_intent(prompt)
+    if intent and intent in FOLLOWUP_MAP:
+        return FOLLOWUP_MAP[intent]
+    return ["Would you like to explore memory, CPU or disk metrics?", 
+            "You can ask for latency, errors or trends next."]
