@@ -1,17 +1,36 @@
 from rapidfuzz import fuzz
 
 # 🔧 Predefined static context mapping
+# backend/utils/static_context.py
+
 PROMQL_CONTEXT_MAP = {
-    "cpu": "CPU usage is typically collected using: rate(node_cpu_seconds_total[5m]).",
-    "memory": "Memory usage can be monitored with: node_memory_Active_bytes or node_memory_MemAvailable_bytes.",
-    "disk": "Disk metrics use: node_filesystem_free_bytes, node_disk_read_bytes_total, node_disk_written_bytes_total.",
-    "uptime": "System uptime can be fetched using: node_boot_time_seconds.",
-    "http_errors": "HTTP error rates (like 5xx) use: rate(http_requests_total{status=~\"5..\"}[5m]).",
-    "network": "Network stats: rate(node_network_receive_bytes_total[5m]), rate(node_network_transmit_bytes_total[5m]).",
-    "pod": "Pod metrics example: sum(container_memory_usage_bytes) by (pod).",
-    "node_latency": "Node latency is often tracked using histogram_quantile over request_duration_seconds metrics.",
-    "disk_io": "Disk I/O trend: rate(node_disk_io_time_seconds_total[5m]).",
-    "namespace": "Namespace-specific memory: sum(container_memory_usage_bytes) by (namespace)."
+    "cpu": [
+        "CPU usage (percent): avg(rate(process_cpu_seconds_total[1m])) by (instance)",
+        "CPU usage for application: rate(container_cpu_usage_seconds_total{container!=\"\", pod!=\"\"}[5m])",
+        "Node CPU idle: 100 - (avg by (instance)(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+        "Top CPU consumers: topk(5, rate(container_cpu_usage_seconds_total[1m]))"
+    ],
+    "memory": [
+        "Memory usage in MB: node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+        "Memory usage for namespace: sum(container_memory_usage_bytes{namespace=\"kube-system\"}) by (pod)",
+        "Available memory percentage: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100"
+    ],
+    "disk": [
+        "Disk usage in percent: 100 - (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100",
+        "Disk I/O: rate(node_disk_read_bytes_total[5m])"
+    ],
+    "network": [
+        "Network I/O rate: rate(container_network_transmit_bytes_total[5m])",
+        "Pod-level network RX: sum(rate(container_network_receive_bytes_total{pod=\"your-pod\"}[5m]))"
+    ],
+    "http_errors": [
+        "HTTP 5xx errors: sum(rate(http_requests_total{status=~\"5..\"}[5m]))",
+        "Error rate by route: sum(rate(http_requests_total{status=~\"5..\"}[1m])) by (route)"
+    ],
+    "uptime": [
+        "Instance uptime in seconds: node_time_seconds - node_boot_time_seconds",
+        "Prometheus uptime: time() - process_start_time_seconds"
+    ]
 }
 
 def retrieve_context(user_prompt: str) -> str:
