@@ -1,72 +1,73 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import './dashboard.css';
+import SearchBar from './SearchBar';
 import WidgetCard from './WidgetCard';
 import FilterSidebar from './FilterSidebar';
-import SearchBar from './SearchBar';
-import '../styles/dashboard.css';
-import '../styles/widget.css';
-import { fetchLiveMetrics } from '../utils/websocket';
 
 const Dashboard = () => {
   const [widgets, setWidgets] = useState([]);
-  const [filteredWidgetIds, setFilteredWidgetIds] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchPrompt, setSearchPrompt] = useState('');
+  const [error, setError] = useState(null);
 
   const handleSearchSubmit = async (prompt) => {
+    setLoading(true);
+    setSearchPrompt(prompt);
     try {
-      setLoading(true);
       const res = await fetch('http://localhost:8080/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
-
-      if (data.layout && data.layout.length > 0) {
+      if (data.layout) {
         setWidgets(data.layout);
-        setFilteredWidgetIds(data.layout.map((w) => w.id));
+      } else {
+        setWidgets([]);
       }
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      console.error('API error:', err);
+      setError('Failed to load dashboard widgets.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleWidget = (widgetId) => {
-    setFilteredWidgetIds((prev) =>
-      prev.includes(widgetId)
-        ? prev.filter((id) => id !== widgetId)
-        : [...prev, widgetId]
+  const handleCategoryToggle = (category, checked) => {
+    setFilteredCategories((prev) =>
+      checked ? [...prev, category] : prev.filter((c) => c !== category)
     );
   };
 
-  useEffect(() => {
-    fetchLiveMetrics((liveUpdates) => {
-      setWidgets((prevWidgets) =>
-        prevWidgets.map((widget) => ({
-          ...widget,
-          value: liveUpdates[widget.id] || widget.value
-        }))
-      );
-    });
-  }, []);
+  const visibleWidgets = widgets.filter((w) =>
+    filteredCategories.length === 0 ? true : filteredCategories.includes(w.category)
+  );
 
   return (
-    <div className="dashboard-container">
-      <SearchBar onSearch={handleSearchSubmit} />
+    <div className="main-dashboard">
+      <div className="dashboard-header">
+        <SearchBar onSearch={handleSearchSubmit} />
+      </div>
+
       <div className="dashboard-body">
-        <FilterSidebar
-          availableWidgets={widgets}
-          selectedWidgets={filteredWidgetIds}
-          onToggle={handleToggleWidget}
-        />
-        <div className="widget-grid">
+        <div className="sidebar-section">
+          <FilterSidebar widgets={widgets} onToggle={handleCategoryToggle} />
+        </div>
+
+        <div className="content-area">
           {loading ? (
-            <div className="loading-indicator">Loading...</div>
+            <div className="dashboard-loading">Loading...</div>
+          ) : error ? (
+            <div className="dashboard-error">{error}</div>
+          ) : visibleWidgets.length > 0 ? (
+            <div className="widget-container">
+              {visibleWidgets.map((widget, idx) => (
+                <WidgetCard key={idx} data={widget} />
+              ))}
+            </div>
           ) : (
-            widgets
-              .filter((widget) => filteredWidgetIds.includes(widget.id))
-              .map((widget, idx) => <WidgetCard key={idx} data={widget} />)
+            <div className="dashboard-empty">No widgets to display.</div>
           )}
         </div>
       </div>
