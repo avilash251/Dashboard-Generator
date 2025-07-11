@@ -13,38 +13,53 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // 🔁 When user submits prompt
-  const handlePromptSubmit = async (prompt) => {
-    setUserPrompt(prompt);
-    setIsLoading(true);
-    setChatResponse(null);
-    setWidgetData([]);
+  const handleSearchSubmit = async (prompt) => {
+  setLoading(true);
+  setError(null);
+  setChatSummary({
+    type: "info",
+    message: "Thinking... please wait.",
+  });
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+  try {
+    const res = await fetch(`${apiBase}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const { slm, layout, next } = data;
+
+    if (slm) {
+      setChatSummary({ type: "slm", message: slm });
+    } else if (layout?.length > 0) {
+      setWidgetData(layout); // Render charts
+      setChatSummary({
+        type: "success",
+        message: `Generated ${layout.length} PromQL charts. To view them, please maximize the dashboard.`,
       });
-
-      const data = await res.json();
-      setChatResponse(data);
-
-      // 🎯 If layout (promql) is returned, fetch live values
-      if (data.layout && Array.isArray(data.layout)) {
-        const enriched = await Promise.all(
-          data.layout.map(async (widget) => {
-            const value = await fetchChartData(widget.promql);
-            return { ...widget, value };
-          })
-        );
-        setWidgetData(enriched);
-      }
-    } catch (err) {
-      console.error("Prompt submit failed:", err);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setChatSummary({
+        type: "info",
+        message: "No chart layout found. Try a different query or adjust filters.",
+      });
     }
-  };
+
+    setFollowUps(next || []);
+  } catch (err) {
+    setError(err.message);
+    toast.error(`❌ ${err.message}`);
+    setChatSummary({
+      type: "error",
+      message: `Something went wrong: ${err.message}`,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleFollowUpClick = (followup) => {
     handlePromptSubmit(followup);
