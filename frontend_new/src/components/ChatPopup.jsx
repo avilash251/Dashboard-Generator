@@ -1,46 +1,94 @@
-import React, { useState } from 'react';
-import SearchBar from './SearchBar';
-import ChartContainer from './ChartContainer';
-import './chatPopup.css';
+import React, { useState } from "react";
+import ChatSummary from "./ChatSummary";
+import SearchBar from "./SearchBar";
+import FollowUpList from "./FollowUpList";
+import "./ChatPopup.css";
 
-const ChatPopup = ({ onClose, onMaximize }) => {
-  const [chartData, setChartData] = useState([]);
-  const [nextSuggestions, setNextSuggestions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+const ChatPopup = ({ onExpand }) => {
+  const [summary, setSummary] = useState(null);
+  const [followUps, setFollowUps] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
-  const handleSearchSubmit = async (prompt) => {
+  const handleMinimize = () => {
+    setIsMinimized(true);
+  };
+
+  const handleMaximize = () => {
+    setIsMinimized(false);
+    onExpand();
+  };
+
+  const handleChatSubmit = async (prompt) => {
+    setLoading(true);
+    setSummary({ type: "info", message: "🤖 Thinking..." });
+
     try {
-      setIsLoading(true);
       const res = await fetch("http://localhost:8080/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-
       const data = await res.json();
-      setChartData(data.layout || []);
-      setNextSuggestions(data.next || []);
+
+      if (data.slm) {
+        setSummary({ type: "slm", message: data.slm });
+        setFollowUps(data.next || []);
+      } else if (data.layout?.length > 0) {
+        setSummary({
+          type: "success",
+          message: "Charts are ready. Click maximize to view full dashboard.",
+        });
+        setFollowUps(data.next || []);
+      } else {
+        setSummary({
+          type: "info",
+          message: "No data found. Try rephrasing your query.",
+        });
+      }
     } catch (err) {
-      console.error("Error fetching charts:", err);
+      setSummary({ type: "error", message: "Error: " + err.message });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="chat-popup">
+    <div className={`chat-popup ${isMinimized ? "minimized" : ""}`}>
       <div className="chat-header">
-        <span>🔍 Ask AI Dashboard</span>
-        <div>
-          <button onClick={onMaximize}>⛶</button>
-          <button onClick={onClose}>✖</button>
+        <span>🤖 Assistant</span>
+        <div className="chat-controls">
+          {isMinimized ? (
+            <button className="maximize-btn" onClick={handleMaximize}>
+              ⛶
+            </button>
+          ) : (
+            <>
+              <button className="minimize-btn" onClick={handleMinimize}>
+                🗕
+              </button>
+              <button className="maximize-btn" onClick={handleMaximize}>
+                ⛶
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="chat-body">
-        <SearchBar onSearch={handleSearchSubmit} />
-        {isLoading ? <p>Generating insights...</p> : null}
-        <ChartContainer layout={chartData} next={nextSuggestions} />
+        <ChatSummary summary={summary} />
+        {!isMinimized && (
+          <FollowUpList suggestions={followUps} onSelect={handleChatSubmit} />
+        )}
       </div>
+      {!isMinimized && (
+        <div className="chat-footer">
+          <SearchBar
+            placeholder="Ask a question..."
+            onSearch={handleChatSubmit}
+            loading={loading}
+          />
+        </div>
+      )}
     </div>
   );
 };
