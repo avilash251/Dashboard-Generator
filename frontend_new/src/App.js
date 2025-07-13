@@ -1,18 +1,17 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Dashboard from './components/Dashboard';
-import ChatPopup from './components/ChatPopup';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Dashboard from "./components/Dashboard";
+import ChatPopup from "./components/ChatPopup";
+import "./App.css";
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/prometheus-dashboard" element={<Dashboard />} />
-        {/* Default page */}
-        <Route path="/" element={
-          <>
-            <ChatPopup onExpand={() => window.location.href = "/prometheus-dashboard"} />
-          </>
-        } />
+        <Route path="/" element={<ChatPopup />} />
+        <Route path="/promethus-dashboard" element={<Dashboard />} />
+        {/* Add a fallback route */}
+        <Route path="*" element={<h2>404: Page Not Found</h2>} />
       </Routes>
     </Router>
   );
