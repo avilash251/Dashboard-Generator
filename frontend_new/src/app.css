@@ -1,0 +1,134 @@
+/* Reset */
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Segoe UI", sans-serif;
+  background-color: #f5f5f5;
+}
+
+/* App container */
+.app-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Floating robot icon (to open chat) */
+.floating-bot-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 28px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  cursor: pointer;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-bot-button:hover {
+  background-color: #0056b3;
+}
+
+/* Chat popup */
+.chat-popup {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 350px;
+  height: 480px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 998;
+}
+
+/* Chat header */
+.chat-popup-header {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 16px;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Chat body */
+.chat-popup-body {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  background: #f7f9fc;
+}
+
+/* Fullscreen dashboard */
+.dashboard-fullscreen {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  overflow-y: auto;
+}
+
+/* Message bubble styles */
+.message-row {
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-user {
+  align-self: flex-end;
+  background-color: #dcf8c6;
+  color: #000;
+  padding: 8px 12px;
+  border-radius: 15px 15px 0 15px;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+
+.message-bot {
+  align-self: flex-start;
+  background-color: #e4e6eb;
+  color: #000;
+  padding: 8px 12px;
+  border-radius: 15px 15px 15px 0;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+
+/* Dashboard header (with minimize button) */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #20232a;
+  color: white;
+  padding: 12px 20px;
+  font-size: 18px;
+}
+
+.minimize-btn {
+  background-color: #f0ad4e;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.minimize-btn:hover {
+  background-color: #d08925;
+}
