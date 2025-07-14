@@ -1,114 +1,87 @@
-import React, { useState, useEffect, useRef } from "react";
-import "./ChatPopup.css";
-import { useNavigate } from "react-router-dom";
-import { FaRobot, FaArrowUp, FaTimes, FaExpand } from "react-icons/fa";
+import React, { useState } from "react";
+import "../styles/ChatPopup.css";
 
-const ChatPopup = ({ isOpen, setIsOpen }) => {
-  const [messages, setMessages] = useState([]);
+function ChatPopup({ isOpen, onClose, onSubmit }) {
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
-  const navigate = useNavigate();
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleUserMessage = async () => {
     if (!input.trim()) return;
-
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
+    const userMsg = { role: "user", text: input };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
 
     try {
       const res = await fetch("http://localhost:8080/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: input })
+        body: JSON.stringify({ prompt: input }),
       });
 
       const data = await res.json();
-
-      const aiSummary = data.slm || "Here is a summary of your request.";
-      const followupNote =
-        data.layout?.length > 0
-          ? "📈 For full details and charts, please click Maximize to open the Prometheus Dashboard."
-          : "🤖 No charts available for this query.";
-
-      const assistantMessage = {
+      const summaryText = data?.slm || (data.layout?.length
+        ? "Charts and layout generated. Maximize to view."
+        : "No charts found.");
+      const assistantMsg = {
         role: "assistant",
-        content: `${aiSummary}\n\n${followupNote}`
+        text: summaryText,
+        followups: data?.next || [],
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "❌ Error fetching response." }
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", text: "⚠️ Error fetching response." }]);
     } finally {
-      setIsLoading(false);
+      setInput("");
+      setLoading(false);
     }
+  };
+
+  const handleFollowup = async (followupPrompt) => {
+    setInput(followupPrompt);
+    await handleUserMessage();
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") handleSubmit();
+    if (e.key === "Enter") handleUserMessage();
   };
-
-  const handleMaximize = () => {
-    setIsOpen(false);
-    navigate("/promethus-dashboard");
-  };
-
-  const handleClose = () => {
-    setIsOpen(false);
-    navigate("/");
-  };
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
-  if (!isOpen) return null;
 
   return (
-    <div className="chat-popup-container">
-      <div className="chat-popup-header">
-        <FaRobot className="robot-icon" />
-        <span>AI Assistant</span>
-        <div className="chat-popup-actions">
-          <FaExpand onClick={handleMaximize} title="Maximize" />
-          <FaTimes onClick={handleClose} title="Close" />
-        </div>
+    <div className={`chat-popup ${isOpen ? "open" : ""}`}>
+      <div className="chat-header">
+        <span>🧠 Infra Assistant</span>
+        <button onClick={onClose}>–</button>
       </div>
-
-      <div className="chat-popup-body">
+      <div className="chat-body">
         {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`chat-bubble ${msg.role === "user" ? "user" : "bot"}`}
-          >
-            {msg.content}
+          <div key={idx} className={`chat-msg ${msg.role}`}>
+            <div className="bubble">{msg.text}</div>
+            {msg.followups && msg.followups.length > 0 && (
+              <div className="followup-list">
+                {msg.followups.map((f, i) => (
+                  <button key={i} onClick={() => handleFollowup(f)} className="followup-btn">
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
-        {isLoading && <div className="chat-bubble bot">Typing...</div>}
-        <div ref={messagesEndRef} />
+        {loading && <div className="typing-indicator">AI is typing...</div>}
       </div>
-
-      <div className="chat-popup-footer">
+      <div className="chat-footer">
         <input
           type="text"
-          placeholder="Ask me anything..."
+          placeholder="Ask about your infrastructure..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
         />
-        <button onClick={handleSubmit}>
-          <FaArrowUp />
-        </button>
+        <button onClick={handleUserMessage}>Send</button>
       </div>
     </div>
   );
-};
+}
 
 export default ChatPopup;
