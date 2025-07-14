@@ -1,36 +1,79 @@
 import json
 from utils.context_classifier import infer_context_role, infer_context_scope
 from utils.retrieve_context import retrieve_context
-from utils.gemini_wrapper import model  # replace with OpenAI/Gemini wrapper as used
+from utils.gemini_wrapper import model
+from dbscripts.audit_db import save_log
 
 def build_gemini_prompt(user_prompt: str, context: str, role: str, scope: str) -> str:
     return f"""
-You are a highly skilled Prometheus monitoring assistant. Your task is to interpret a user’s natural language query and translate it into a structured dashboard definition using PromQL.
+You are a Prometheus dashboard assistant. Your job is to convert user requests into dashboard layouts using PromQL.
 
-Given the user prompt below:
-
-🔸 User Prompt:
+User Prompt:
 \"\"\"{user_prompt}\"\"\"
 
-You must determine:
+Context Role: {role}
+Context Scope: {scope}
 
-1️⃣ intent — The main purpose of the request. Be specific. Examples: "cpu_usage_by_node", "memory_by_namespace", "disk_io_per_pod", etc.
+PromQL Knowledge:
+\"\"\"{context}\"\"\"
 
-2️⃣ context_role — The monitoring scope: ["infrastructure", "application", "cluster", "cloud", "network", etc.]
+Return a JSON with keys: intent, context_role, context_scope, layout, suggestions.
 
-3️⃣ context_scope — The level of granularity (e.g., "per pod", "by namespace", "node-level", "per server", or "generic" if not inferable)
-
-4️⃣ layout — A JSON array of recommended PromQL visualizations. Each item must have:
-
-```json
+Layout format:
 [
   {{
     "title": "string",
     "promql": "string",
     "chart_type": "line" | "bar" | "area",
     "thresholds": {{
-      "warning": number (optional),
-      "critical": number (optional)
+      "warning": number,
+      "critical": number
     }}
   }}
 ]
+
+Output only valid JSON. No extra text.
+"""
+
+def ask_gemini(user_prompt: str) -> dict:
+    try:
+        # Step 1: Retrieve additional context
+        context = retrieve_context(user_prompt)
+        role = infer_context_role(user_prompt)
+        scope = infer_context_scope(user_prompt)
+
+        prompt = build_gemini_prompt(user_prompt, context, role, scope)
+
+        # Step 2: Call Gemini or OpenAI endpoint
+        response = model.generate_content(prompt)
+        output = json.loads(response.text.strip())
+
+        # Step 3: Log the entire interaction to DB
+        save_log({
+            "user_prompt": user_prompt,
+            "response": output,
+            "context_role": output.get("context_role", role),
+            "context_scope": output.get("context_scope", scope),
+            "intent": output.get("intent", "unknown"),
+            "source": "gemini"
+        })
+
+        return output
+
+    except Exception as e:
+        print(f"[Gemini Error] {e}")
+        save_log({
+            "user_prompt": user_prompt,
+            "response": str(e),
+            "context_role": "error",
+            "context_scope": "error",
+            "intent": "error",
+            "source": "gemini"
+        })
+        return {
+            "intent": "unknown",
+            "context_role": "generic",
+            "context_scope": "generic",
+            "layout": [],
+            "suggestions": ["Please rephrase or clarify your request."]
+        }
