@@ -1,0 +1,28 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "node_cpu_seconds_total",
+          "cpu": "0",
+          "instance": "localhost:9100",
+          "job": "node",
+          "mode": "user"
+        },
+        "value": [1695634800.123, "0.002365"]
+      },
+      {
+        "metric": {
+          "__name__": "node_cpu_seconds_total",
+          "cpu": "1",
+          "instance": "localhost:9100",
+          "job": "node",
+          "mode": "system"
+        },
+        "value": [1695634800.123, "0.001723"]
+      }
+    ]
+  }
+}
