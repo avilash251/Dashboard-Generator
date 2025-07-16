@@ -1,28 +1,78 @@
 {
-  "status": "success",
-  "data": {
-    "resultType": "vector",
-    "result": [
+  "summary": "Here's a summary of infrastructure status for host1. CPU usage is at 58%, memory usage is 14.2 GB, disk has 115 GB free, and network I/O is averaging 1.2 Gbps.",
+  "layout": {
+    "widgets": [
       {
-        "metric": {
-          "__name__": "node_cpu_seconds_total",
-          "cpu": "0",
-          "instance": "localhost:9100",
-          "job": "node",
-          "mode": "user"
-        },
-        "value": [1695634800.123, "0.002365"]
+        "type": "cpu",
+        "title": "CPU Usage",
+        "value": "58",
+        "unit": "%"
       },
       {
-        "metric": {
-          "__name__": "node_cpu_seconds_total",
-          "cpu": "1",
-          "instance": "localhost:9100",
-          "job": "node",
-          "mode": "system"
-        },
-        "value": [1695634800.123, "0.001723"]
+        "type": "memory",
+        "title": "Memory Used",
+        "value": "14.2",
+        "unit": "GB"
+      },
+      {
+        "type": "disk",
+        "title": "Disk Free",
+        "value": "115",
+        "unit": "GB"
+      },
+      {
+        "type": "network",
+        "title": "Network I/O",
+        "value": "1.2",
+        "unit": "Gbps"
+      }
+    ],
+    "charts": [
+      {
+        "title": "CPU Usage Over Time",
+        "type": "line",
+        "unit": "%",
+        "promql": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+        "series": [
+          {
+            "name": "host1",
+            "data": [
+              [1721137200, 25],
+              [1721137260, 35],
+              [1721137320, 42],
+              [1721137380, 58]
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Memory Usage Over Time",
+        "type": "line",
+        "unit": "GB",
+        "promql": "node_memory_Active_bytes / 1024 / 1024 / 1024",
+        "series": [
+          {
+            "name": "host1",
+            "data": [
+              [1721137200, 12.3],
+              [1721137260, 13.5],
+              [1721137320, 13.9],
+              [1721137380, 14.2]
+            ]
+          }
+        ]
       }
     ]
-  }
+  },
+  "meta": {
+    "source": "Gemini",
+    "timestamp": "2025-07-16T17:50:00Z",
+    "context_scope": "host1",
+    "context_role": "infrastructure_summary"
+  },
+  "next": [
+    "Show disk usage by mount path on host1",
+    "Compare CPU usage across nodes",
+    "Get alert status for host1"
+  ]
 }
