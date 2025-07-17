@@ -1,21 +1,22 @@
-from fastapi import WebSocket, APIRouter
-import json
+# websocket_manager.py
+from fastapi import WebSocket
 
-ws_router = APIRouter()
+class WebSocketManager:
+    def __init__(self):
+        self.connections: list[WebSocket] = []
 
-@ws_router.websocket("/ws/metrics")
-async def metrics_stream(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            # Simulate or fetch real-time metric
-            metric = {
-                "title": "CPU Usage",
-                "type": "cpu",
-                "value": 77,
-                "timestamp": time.time(),
-            }
-            await websocket.send_text(json.dumps(metric))
-            await asyncio.sleep(5)
-    except:
-        await websocket.close()
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for ws in self.connections:
+            try:
+                await ws.send_text(message)
+            except:
+                pass  # silently fail or clean up dead sockets
+
+ws_manager = WebSocketManager()
