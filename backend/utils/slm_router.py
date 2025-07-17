@@ -1,32 +1,33 @@
-from typing import Optional
+from datetime import datetime
+from utils.prompt_utils import is_pure_greeting, is_greeting, sanitize_prompt
 
-def slm_respond(prompt: str) -> Optional[str]:
+# ✅ Entry point for SLM logic
+def handle_slm_response(prompt: str):
+    prompt = prompt.strip()
+    
+    # Pure greeting? Return early, no LLM
+    if is_pure_greeting(prompt):
+        return {
+            "summary": "Hello! How can I assist you?",
+            "layout": {},
+            "meta": {
+                "timestamp": datetime.utcnow().isoformat(),
+                "context_role": "greeting",
+                "context_scope": "none",
+                "source": "slm"
+            },
+            "next": [
+                "CPU usage of host1",
+                "Memory stats by pod",
+                "Check alerts for namespace=prod"
+            ]
+        }
 
-    """
-    Lightweight rule-based prompt router for simple interactions.
-    Returns a response if the prompt is simple (greeting, thanks, help), or None to fallback.
-    """
+    # Otherwise: clean prompt + return greeting string
+    cleaned = sanitize_prompt(prompt)
+    greeting = "Hi there 👋! Let me get that for you..." if is_greeting(prompt) else None
 
-    prompt_lower = prompt.strip().lower()
-
-    # Greeting and small talk
-    if any(word in prompt_lower for word in ["hello", "hi", "hey", "good morning", "good evening"]):
-        return "👋 Hello! How can I assist you with your metrics or dashboard today?"
-
-    # Gratitude
-    if "thank" in prompt_lower:
-        return "🙏 You're welcome! Let me know if there's anything else you need."
-
-    # Help / guidance
-    if "help" in prompt_lower or "how to" in prompt_lower or "usage" in prompt_lower:
-        return (
-            "🧠 I can assist you with:\n"
-            "- Creating Prometheus dashboards\n"
-            "- Generating PromQL queries\n"
-            "- Showing server health metrics\n"
-            "- Explaining infrastructure KPIs\n"
-            "Just type something like: 'Show me server1 analysis'."
-        )
-
-    # Fallback: prompt not understood by SLM
-    return None
+    return {
+        "greeting_msg": greeting,
+        "cleaned_prompt": cleaned
+    }
