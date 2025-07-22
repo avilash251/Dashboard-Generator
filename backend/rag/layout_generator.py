@@ -1,15 +1,10 @@
 LAYOUT_PROMPT = """
-You are an infrastructure layout generation agent.
+JSON output only.
 
-Your task is to convert the following plain-text infrastructure summary into a structured layout JSON object for dashboard rendering.
+- statscards: [{title, value, unit}]
+- charts: [{title, promql, type}]
+- performance_alerts: {high_cpu_hosts: [], underutilized_hosts: []}
 
-The layout must include:
-1. "statscards": key system stats like CPU cores, memory, disk, OS, environment, total servers
-2. "charts": PromQL-based chart placeholders (title, promql, type)
-3. "performance_alerts": include hostnames with high CPU and low utilization
-
-Ensure the output is a valid JSON. Do not include markdown or explanations.
-
-Here is the summary:
+Summary:
 \"\"\"{summary}\"\"\"
 """
