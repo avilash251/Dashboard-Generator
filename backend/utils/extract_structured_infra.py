@@ -1,7 +1,6 @@
 import re
-from flashtext import KeywordProcessor
 
-def extract_structured_infra(summary: str, known_hosts: list = []):
+def extract_structured_infra(summary: str):
     result = {
         "statscards": [],
         "performance_alerts": {
@@ -11,48 +10,67 @@ def extract_structured_infra(summary: str, known_hosts: list = []):
         "custom_configs": []
     }
 
-    # Stats: Total servers
-    match = re.search(r"health of (\d+) .*? servers", summary, re.I)
-    if match:
+    # 🖥️ Total servers
+    m = re.search(r"health of (\d+)\s+.*?servers", summary, re.I)
+    if m:
         result["statscards"].append({
             "title": "Total Servers",
-            "value": int(match.group(1)),
+            "value": int(m.group(1)),
             "unit": "hosts"
         })
 
-    # General resources
-    cpu = re.search(r"(\d+)[ ]*core", summary)
-    mem = re.search(r"(\d+)[ ]*GB memory", summary)
-    disk = re.search(r"(\d+)[ ]*GB disk", summary)
+    # 🧠 CPU handling
+    # Case 1: "8 core processors"
+    match_core = re.search(r"(\d+)\s+core[s]?\s+processor[s]?", summary, re.I)
 
-    if cpu:
-        result["statscards"].append({"title": "CPU", "value": int(cpu.group(1)), "unit": "cores"})
-    if mem:
-        result["statscards"].append({"title": "Memory", "value": int(mem.group(1)), "unit": "GB"})
-    if disk:
-        result["statscards"].append({"title": "Disk", "value": int(disk.group(1)), "unit": "GB"})
+    # Case 2: "8 processors, 1 core per processor"
+    match_processor_core = re.search(r"(\d+)\s+processor[s]?.*?(\d+)\s+core[s]?\s+per\s+processor", summary, re.I)
 
-    # Custom configurations
-    custom_matches = re.findall(r"(\d+)[ ]*core.*?(\d+)[ ]*GB.*?(\d+)[ ]*GB", summary, re.I)
-    for c, m, d in custom_matches:
-        result["custom_configs"].append({
-            "cpu": int(c),
-            "memory": int(m),
-            "disk": int(d)
+    if match_processor_core:
+        cpu_total = int(match_processor_core.group(1)) * int(match_processor_core.group(2))
+    elif match_core:
+        cpu_total = int(match_core.group(1))
+    else:
+        cpu_total = None
+
+    if cpu_total:
+        result["statscards"].append({
+            "title": "CPU",
+            "value": cpu_total,
+            "unit": "cores"
         })
 
-    # Use FlashText for hostname detection (optional)
-    keyword_processor = KeywordProcessor()
-    for h in known_hosts:
-        keyword_processor.add_keyword(h)
+    # 💾 Memory: e.g., "64GB memory", "128 GB of RAM"
+    match_mem = re.search(r"(\d+)\s*GB\s*(?:memory|ram)", summary, re.I)
+    if match_mem:
+        result["statscards"].append({
+            "title": "Memory",
+            "value": int(match_mem.group(1)),
+            "unit": "GB"
+        })
 
-    found_hosts = keyword_processor.extract_keywords(summary)
+    # 🗄️ Disk: "500GB disk", "1024 GB storage"
+    match_disk = re.search(r"(\d+)\s*GB\s*(?:disk|storage)", summary, re.I)
+    if match_disk:
+        result["statscards"].append({
+            "title": "Disk",
+            "value": int(match_disk.group(1)),
+            "unit": "GB"
+        })
 
-    # Performance alerts
-    high_cpu = re.findall(r"high cpu.*?\b(host\w+)\b", summary, re.I)
-    underutil = re.findall(r"\b(host\w+)\b.*?(low cpu|underutilized|low memory)", summary, re.I)
+    # 📊 Custom configurations
+    configs = re.findall(r"(\d+)\s*core.*?(\d+)\s*GB.*?(\d+)\s*GB", summary, re.I)
+    for cpu, mem, disk in configs:
+        result["custom_configs"].append({
+            "cpu": int(cpu),
+            "memory": int(mem),
+            "disk": int(disk)
+        })
 
-    result["performance_alerts"]["high_cpu_hosts"] = list(set(high_cpu) | set(found_hosts))
-    result["performance_alerts"]["underutilized_hosts"] = list(set(h[0] for h in underutil))
+    # ⚠️ Performance alerts (basic)
+    result["performance_alerts"]["high_cpu_hosts"] = re.findall(r"high cpu.*?\b([a-zA-Z0-9\-_]+)\b", summary, re.I)
+    result["performance_alerts"]["underutilized_hosts"] = [
+        match[0] for match in re.findall(r"\b([a-zA-Z0-9\-_]+)\b.*?(underutilized|low cpu|low memory|idle)", summary, re.I)
+    ]
 
     return result
