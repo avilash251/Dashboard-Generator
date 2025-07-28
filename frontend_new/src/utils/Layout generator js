@@ -1,0 +1,72 @@
+const input = {
+  agent: [],
+  layout: [
+    { forecast: [] },
+    { health: [] },
+    {
+      inventory: [
+        {
+          type: "table",
+          title: "Inventory Metrics",
+          columns: ["host", "env"],
+          rows: [
+            { host: "host1", env: "prod" },
+            { host: "host2", env: "prod" },
+            { host: "host3", env: "nonProd" }
+          ]
+        },
+        {
+          type: "stats_card",
+          title: "Inventory Summary",
+          columns: [],
+          rows: [{ cpu: 3, memory: 500 }]
+        }
+      ]
+    },
+    { logs: [] }
+  ],
+  summary: "summary"
+};
+
+const flattenLayout = (input) => {
+  const output = {
+    summary: input.summary,
+    agent: input.agent,
+    layout: {}
+  };
+
+  input.layout.forEach((section) => {
+    const key = Object.keys(section)[0];
+    const value = section[key];
+
+    if (!Array.isArray(value)) {
+      output.layout[key] = value;
+      return;
+    }
+
+    // For inventory with multiple types
+    output.layout[key] = value.map((item) => {
+      if (item.type === "table") {
+        return {
+          type: "table",
+          title: item.title,
+          columns: item.columns,
+          rows: item.rows
+        };
+      } else if (item.type === "stats_card") {
+        return {
+          type: "stats_card",
+          title: item.title,
+          rows: item.rows
+        };
+      } else {
+        return item; // future types handled generically
+      }
+    });
+  });
+
+  return output;
+};
+
+const result = flattenLayout(input);
+console.log(JSON.stringify(result, null, 2));
