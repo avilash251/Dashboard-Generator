@@ -1,0 +1,119 @@
+Agentic AI Interview Questions and Answers
+
+
+---
+
+Section A: Agentic AI Concepts & Implementation
+
+1. What is agentic AI and how is it different from traditional LLM applications? Agentic AI involves a collection of specialized agents, each with defined roles, that collaboratively solve tasks through reasoning, planning, and interaction. Unlike traditional LLM applications which are often single-pass and linear, agentic AI supports modular, composable reasoning pipelines where agents can pass context and results iteratively.
+
+2. Explain your multi-agent architecture and each agent's role. I built a pipeline of agents:
+
+Intent Agent: Extracts metadata (intent, resource_type, etc.) from the prompt.
+
+Follow-up Agent: Suggests specific refinements if the query is vague.
+
+PromQL Generator: Converts refined prompts into PromQL expressions.
+
+Layout Agent: Converts PromQL into dashboard layout JSON (charts, badges). Each agent shares structured context via a context_record.
+
+
+3. How do your agents communicate and share context? Agents exchange structured JSON objects using an internal context structure called the Model Context Protocol (MCP). It stores the prompt, extracted metadata, layout data, follow-up questions, and session ID, enabling context reuse across the chain.
+
+4. Did you use CrewAI, LangGraph, or custom orchestration? Why? I implemented a custom orchestration because it gave me full control over prompt structure, session state, and UI rendering. While frameworks like CrewAI are powerful, custom logic allowed better optimization for PromQL use cases.
+
+5. How do you avoid duplication or loops between agents? Each agent checks the context_record to determine whether it has already processed a step. Flags like intent_verified, followup_needed are used to control execution flow. This ensures idempotency.
+
+
+---
+
+Section B: Prompt Engineering & LLM Use
+
+6. How did you design prompts for different agents? I used role-specific prompts. For intent detection, the prompt says: "Extract: intent, resource_type, aggregation_level, time_function, metric_scope. Return valid JSON." For PromQL generation, I use instruction-driven templates and few-shot examples.
+
+7. How do you ensure deterministic LLM output for dashboards? I use structured prompts with explicit output formatting instructions and schema enforcement using regex or JSON validation. I also implement fallback templates.
+
+8. How do you minimize hallucinations? I maintain a registry of valid Prometheus metrics and validate the output against it. Invalid queries are corrected using predefined templates or filtered out before execution.
+
+9. How do you generate follow-up prompts dynamically? If intent is unknown, the system invokes the Follow-up Agent, which suggests scoped prompts (e.g., "CPU usage per node? per cluster?") based on missing metadata fields.
+
+10. What’s the difference between Gemini and OpenAI in your project? OpenAI was slightly better at structured JSON and function calling, while Gemini provided more domain-contextual responses. I use both with a fallback chain depending on prompt complexity and cost.
+
+
+---
+
+Section C: System Design & Architecture
+
+11. Why did you use WebSockets over REST? Real-time dashboards need constant updates. WebSockets enable continuous streaming of updates, reducing polling overhead and improving latency for user interactions and metric changes.
+
+12. How do you maintain per-session state? Each WebSocket connection is mapped to a session ID stored in Redis. The context_record associated with that session includes previous prompts, current dashboard layout, and chat history.
+
+13. What does the Model Context Protocol (MCP) manage? MCP is a JSON-based protocol that coordinates agent communication. It contains fields like prompt, intent, layout, followup, session_id, and status_flags, ensuring smooth data flow and traceability.
+
+14. How would you scale this system to handle 1K+ sessions? I would:
+
+Use Redis pub/sub to sync session data across workers.
+
+Use horizontal scaling with FastAPI + Uvicorn workers.
+
+Add rate limiting and connection pooling.
+
+Move heavy LLM tasks to background queues (Celery, etc.).
+
+
+15. How do you handle multi-session broadcasting securely? Each session is authenticated and messages are filtered using session-specific tokens. Redis channels are isolated per session. Only messages with matching session ID are delivered.
+
+
+---
+
+Section D: Monitoring & Observability
+
+16. What is PromQL and how do you generate it? PromQL is the query language for Prometheus. I generate it by combining extracted metadata from the Intent Agent with templates like:
+
+rate(node_cpu_seconds_total{mode="user"}[5m])
+
+Templates are dynamic and support nesting with aggregation and filters.
+
+17. How do you validate generated PromQL? I query the Prometheus /api/v1/series endpoint to check if the metric exists. I also wrap queries in try/except and apply regex to catch malformed expressions.
+
+18. How do you detect anomalies in metrics? I use threshold-based logic (> 80% CPU, memory > 90%) and plot overlays. I also use avg_over_time() and stddev_over_time() to detect spikes.
+
+19. How do you differentiate metric scopes like node vs cluster? The Intent Agent extracts aggregation_level (node, cluster, pod). Based on that, we apply functions like:
+
+Node: sum by (node)
+
+Cluster: sum
+
+Pod: sum by (pod)
+
+
+20. How are chart layouts created? Each PromQL response is mapped to a Highcharts-compatible JSON structure. The Layout Agent generates this dynamically, including titles, axes, and thresholds.
+
+
+---
+
+Section E: Frontend Integration & UX
+
+21. How is follow-up chaining reflected in the UI? Follow-up suggestions are shown as clickable buttons below the chat window. Selecting one triggers the pipeline from PromQL generation onward without rerunning intent detection.
+
+22. How is session context preserved across reloads? Session ID and context are stored in browser localStorage and synced with the backend Redis store on reconnect.
+
+23. How is LLM source tagging displayed? We tag each agent’s response with its source (e.g., Gemini, OpenAI) in the UI tooltip, enabling transparency for the user.
+
+24. How are errors handled gracefully? Errors are caught at the backend and returned as structured error messages. The UI displays toast notifications with helpful fallback options.
+
+
+---
+
+Section F: Behavioral & Strategy
+
+25. What was the most challenging problem you solved? Handling vague prompts without clear scope was difficult. I solved it by adding a Follow-up Agent that intelligently suggests scope refinements, improving user experience and accuracy.
+
+26. What tradeoffs did you make in this project? I chose custom orchestration over CrewAI for flexibility, but it required more manual error handling and testing. I also used smaller models for cost control, sacrificing some depth.
+
+27. How would you commercialize this product? I’d turn it into a SaaS observability copilot, allowing enterprises to plug in their own Prometheus instance and receive interactive insights, alerts, and LLM-powered analytics.
+
+28. How would you expand this beyond observability? By making agents pluggable, the framework can support domains like DevOps, FinOps, or security analytics. We just need new Prompt→Intent→Query mappings per domain.
+
+29. How would you explain agentic AI to a business stakeholder? Agentic AI is like hiring a team of assistants: one understands your request, one finds the data, one builds the report, and one shows it to you—all powered by AI, working together in real time.
+
