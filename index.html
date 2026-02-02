@@ -24,8 +24,7 @@
     text-align: center;
     width: 90%;
     max-width: 340px;
-    position: relative;
-    z-index: 2;
+    z-index: 1;
     box-shadow: 0 15px 40px rgba(0,0,0,0.25);
   }
 
@@ -49,12 +48,12 @@
     color: white;
   }
 
+  /* 🔥 KEY FIX */
   #noBtn {
+    position: fixed;
     background: #ddd;
     color: #444;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    z-index: 9999;
   }
 
   #shareBtn {
@@ -71,21 +70,21 @@
     margin-top: 20px;
   }
 
-  /* Floating hearts */
   .heart {
-    position: absolute;
+    position: fixed;
     bottom: -20px;
     font-size: 24px;
     animation: floatUp 6s linear infinite;
     opacity: 0.8;
+    pointer-events: none;
   }
 
   @keyframes floatUp {
-    0% {
+    from {
       transform: translateY(0) scale(1);
       opacity: 1;
     }
-    100% {
+    to {
       transform: translateY(-110vh) scale(1.5);
       opacity: 0;
     }
@@ -94,17 +93,96 @@
 </head>
 <body>
 
-<div class="card" id="card">
+<div class="card">
   <h1>Will you be my Valentine? 💘</h1>
-
   <button id="yesBtn">Yes ❤️</button>
-  <button id="noBtn">No 💔</button>
+</div>
 
-  <div class="message" id="loveMsg">
-    💖 YAYYYY!!! 💖<br><br>
-    You just made my heart the happiest 🥰<br>
-    Forever starts now ❤️✨
-  </div>
+<button id="noBtn">No 💔</button>
+
+<div class="message" id="loveMsg">
+  💖 YAYYYY!!! 💖<br><br>
+  You just made my heart the happiest 🥰<br>
+  Forever starts now ❤️✨
+  <br><br>
+  <button id="shareBtn">Share on WhatsApp 💚</button>
+</div>
+
+<audio id="music" loop>
+  <source src="https://cdn.pixabay.com/audio/2022/02/23/audio_3b7e8f8e27.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+  const noBtn = document.getElementById("noBtn");
+  const yesBtn = document.getElementById("yesBtn");
+  const msg = document.getElementById("loveMsg");
+  const shareBtn = document.getElementById("shareBtn");
+  const music = document.getElementById("music");
+
+  // Initial position
+  noBtn.style.left = "50%";
+  noBtn.style.top = "65%";
+  noBtn.style.transform = "translate(-50%, -50%)";
+
+  function moveNoButton() {
+    const padding = 20;
+    const maxX = window.innerWidth - noBtn.offsetWidth - padding;
+    const maxY = window.innerHeight - noBtn.offsetHeight - padding;
+
+    const x = Math.random() * maxX;
+    const y = Math.random() * maxY;
+
+    noBtn.style.left = `${x}px`;
+    noBtn.style.top = `${y}px`;
+  }
+
+  // Desktop
+  noBtn.addEventListener("mouseover", moveNoButton);
+
+  // Mobile (🔥 critical)
+  noBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    moveNoButton();
+  });
+
+  // YES ❤️
+  yesBtn.addEventListener("click", () => {
+    yesBtn.style.display = "none";
+    noBtn.style.display = "none";
+    msg.style.display = "block";
+    music.play();
+    startHearts();
+  });
+
+  // WhatsApp 💚
+  shareBtn.addEventListener("click", () => {
+    const text = `💖 Someone has a special question for you! 💖
+
+Will you be my Valentine? 😘💌
+👇 Tap the link
+${window.location.href}`;
+
+    window.open(
+      "https://wa.me/?text=" + encodeURIComponent(text),
+      "_blank"
+    );
+  });
+
+  function startHearts() {
+    setInterval(() => {
+      const heart = document.createElement("div");
+      heart.className = "heart";
+      heart.textContent = "❤️";
+      heart.style.left = Math.random() * 100 + "vw";
+      heart.style.animationDuration = (Math.random() * 3 + 4) + "s";
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), 7000);
+    }, 350);
+  }
+</script>
+
+</body>
+</html>  </div>
 
   <button id="shareBtn">Share on WhatsApp 💚</button>
 </div>
