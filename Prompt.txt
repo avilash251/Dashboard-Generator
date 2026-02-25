@@ -1,0 +1,15 @@
+Refactor my existing LangGraph-based multi-agent orchestration system into an MCP-style architecture while preserving all existing business logic.
+The system already uses a Gemini planner for decision making.
+Currently, agents are invoked using keyword-based intent routing.
+The goal is to:
+Remove keyword-based routing
+Wrap each agent as an MCP tool
+Introduce a dynamic tool registry
+Add a Guard Layer before tool execution
+Implement:
+Missing parameter validation
+Auto inference of environment/platform
+Scope guard (cardinality threshold protection)
+Redis caching for count/breakdown
+Preserve LangGraph orchestration and WebSocket flow
+Avoid unnecessary additional Gemini calls
